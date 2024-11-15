@@ -1,0 +1,17 @@
+services:
+  midi2params:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/usr/src/app
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: ["gpu"]

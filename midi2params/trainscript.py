@@ -18,7 +18,7 @@ import copy
 
 from train_utils import *
 
-DEFAULT_CONFIG_PATH = 'midi2params/configs/midi2params-best.yml'
+DEFAULT_CONFIG_PATH = '/usr/src/app/configs/midi2params-bass.yml'
 
 def main(verbose=True):
     args = parse_custom_arguments()

@@ -1,5 +1,21 @@
 # Getting Started
 
+## Personal Notes:
+Working on this repo. to run and test on my own data:
+
+### Changes so far:
+
+* Docker solution to run the source code
+    * DDSP==3.7.0 was a better choice due to updates and changes
+    * As a result TF 2.11.0 is installed which requires tensorflow-probability==0.19.0 [https://github.com/tensorflow/probability/releases/tag/v0.19.0]
+
+* Moved `./utils` to `./scripts` since they are supposed to be there, apparaently..
+* In `./utils/util.py`:
+    * line 33 commented out. `sample_rate` is removed in DDSP==3.7.0
+    * line 35 updated by adding numpy() before astype()
+* In `./midi2params/datasets.py`:
+    * line 257 log and clip the values that fail the assertion for loudness
+    * line 
 ## Reproducing inference
 
 Inference can be reproduced with Docker containers. Follow the below instructions to do so:

@@ -30,9 +30,9 @@ def extract_ddsp_synthesis_parameters(
   ddsp.spectral_ops.reset_crepe()
   audio_features = ddsp.training.metrics.compute_audio_features(
       audio.swapaxes(0, 1),
-      sample_rate=audio_fs,
+      # sample_rate=audio_fs,
       frame_rate=param_fs)
-  audio_features['loudness_db'] = audio_features['loudness_db'].astype(np.float32)
+  audio_features['loudness_db'] = audio_features['loudness_db'].numpy().astype(np.float32)
   del audio_features['audio']
   return audio_features
 

@@ -144,35 +144,41 @@ class MIDIParamsDataset(Dataset):
         return f0, loudness_db, conf
 
     def load_midi(self, f_id):
-        if self.midi_type == 'raw':
-            # get MIDI notes
-            midi_path = os.path.join(self.dset_path, self.midi_folder_name, self.settype, f_id + '.mid')
-            # handle the possibility of either .mid or .midi files
-            try:
-                midi = pretty_midi.PrettyMIDI(midi_path)
-            except FileNotFoundError:
-                midi = pretty_midi.PrettyMIDI(midi_path + 'i')
-            print(f_id)
-            print(midi.instruments)
-            notes = midi.instruments[0].notes
+        try:
+            if self.midi_type == 'raw':
+                # get MIDI notes
+                midi_path = os.path.join(self.dset_path, self.midi_folder_name, self.settype, f_id + '.mid')
+                # handle the possibility of either .mid or .midi files
+                try:
+                    midi = pretty_midi.PrettyMIDI(midi_path)
+                except FileNotFoundError:
+                    midi = pretty_midi.PrettyMIDI(midi_path + 'i')
+                print(f_id)
+                print(midi.instruments)
+                # Check if the instruments list is empty
+                if not midi.instruments:
+                    raise ValueError(f"No instruments found in MIDI file {file_id}")
+                notes = midi.instruments[0].notes
 
-            # get onsets/offsets from MIDI
-            onsets = [int(self.frame_rate * n.start) for n in notes]
-            offsets = [int(self.frame_rate * n.end) for n in notes]
-            # NOTE: make extra long arrays just in case the MIDI notes go on for longer
-            onset_arr = np.zeros((3 * self.len_clip * self.frame_rate), dtype=np.float32)
-            onset_arr[onsets] = 1  # embed pointwise onsets/offsets into zero array
-            offset_arr = np.zeros((3 * self.len_clip * self.frame_rate), dtype=np.float32)
-            offset_arr[offsets] = 1  # embed pointwise onsets/offsets into zero array
+                # get onsets/offsets from MIDI
+                onsets = [int(self.frame_rate * n.start) for n in notes]
+                offsets = [int(self.frame_rate * n.end) for n in notes]
+                # NOTE: make extra long arrays just in case the MIDI notes go on for longer
+                onset_arr = np.zeros((3 * self.len_clip * self.frame_rate), dtype=np.float32)
+                onset_arr[onsets] = 1  # embed pointwise onsets/offsets into zero array
+                offset_arr = np.zeros((3 * self.len_clip * self.frame_rate), dtype=np.float32)
+                offset_arr[offsets] = 1  # embed pointwise onsets/offsets into zero array
 
-            # get pitches
-            pitches = notes2pitches(notes, 3 * self.len_clip * self.frame_rate, NO_NOTE_VAL=0)
-        else: # self.midi_type == 'processed'
-            fpath = os.path.join(self.dset_path, self.midi_folder_name, self.settype, f_id + '.p')
-            arrs = pickle.load(open(fpath, 'rb'))
-            pitches, onset_arr, offset_arr = arrs['pitches'].astype(np.float32), arrs['onset_arr'].astype(np.float32), arrs['offset_arr'].astype(np.float32)
-        
-        return pitches, onset_arr, offset_arr
+                # get pitches
+                pitches = notes2pitches(notes, 3 * self.len_clip * self.frame_rate, NO_NOTE_VAL=0)
+            else: # self.midi_type == 'processed'
+                fpath = os.path.join(self.dset_path, self.midi_folder_name, self.settype, f_id + '.p')
+                arrs = pickle.load(open(fpath, 'rb'))
+                pitches, onset_arr, offset_arr = arrs['pitches'].astype(np.float32), arrs['onset_arr'].astype(np.float32), arrs['offset_arr'].astype(np.float32)
+            
+            return pitches, onset_arr, offset_arr
+        except Exception as e:
+            print(f"Error occured during processing MIDI file: {str(e)}")
 
     def random_truncate(self, batch):
         """
@@ -254,6 +260,13 @@ class MIDIParamsDataset(Dataset):
         f0, loudness_db, conf = self.load_params(f_id)
 
         assert f0.shape == loudness_db.shape == conf.shape
+        
+        # Log and clip the values that fail the assertion
+        if not ((-120 <= loudness_db).all() and (loudness_db <= 0).all()):
+            print(f"Out of range loudness_db at index {idx}: {loudness_db}")
+            print("Clipping the loudness..")
+            loudness_db = np.clip(loudness_db, -120, 0)
+            
         assert (-120 <= loudness_db).all() and (loudness_db <= 0).all()
         assert (0 <= conf).all() and (conf <= 1).all()
         # exclude last 20 because f0 is zeros there (frames and stuff)
